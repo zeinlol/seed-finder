@@ -1,11 +1,16 @@
 # Broken Seed Finder
 
-Find interesting places in minecraft seeds.
-
-You can choose seeds for scanning, or generate random.
-
+Find interesting places in minecraft seeds.  
 Supported all minecraft versions up to 1.17. You need to choose version you want.
 
+This tool scans target seeds for interesting places with structures:
+- large amount of villages
+- broken structures (different types in one place)
+- looped structures
+- etc.
+
+<b>Features:</b>
+- json output
 ## Installation
 
 1. You need to install target vanilla Minecraft version. If you use TLauncher - install Release version. <b style='color: red'>Snapshots are not supported</b>
