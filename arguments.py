@@ -9,4 +9,4 @@ def create_parser():
     parser.add_argument('-o', '--output', type=str, nargs=1, default=' ')
     parser.add_argument('-w', '--world-type', type=str, default='Default')
     parser.add_argument('-t', '--threads', type=int, nargs=1, default='8')
-    return parser
+    return parser.parse_args()

@@ -54,6 +54,5 @@ def main():
 
 if __name__ == '__main__':
     parser = create_parser()
-    DataMiner = parser.parse_args()
-    print(DataMiner)
+    print(parser)
     main()
