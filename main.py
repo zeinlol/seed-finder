@@ -6,11 +6,10 @@ import database
 from itertools import count
 from io import BytesIO
 
-from arguments import arguments, create_parser
 from config.minecraft_config import gen_opts, game
 from core.middleware import check_input
-from middleware.amidst_setup import get_newest_asset
-from middleware.game_utils import generate_random_seed
+from core.middleware.utils.amidst_setup import get_newest_asset
+from core.middleware.utils.game_utils import generate_random_seed
 from serialyzer import filter_mesa
 
 from config.variables import screen_width, screen_height
