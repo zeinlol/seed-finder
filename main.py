@@ -16,6 +16,7 @@ from config.variables import screen_width, screen_height
 
 
 def main():
+    database.initialize_db()
     jpype.startJVM(classpath=get_newest_asset())
     print('JVM started')
     new_minecraft_instance = game.mojangapi.file.MinecraftInstallation.newLocalMinecraftInstallation()
