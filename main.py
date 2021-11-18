@@ -6,6 +6,7 @@ import database
 from itertools import count
 from io import BytesIO
 
+from arguments import create_parser
 from config.minecraft_config import gen_opts, game
 from middleware.amidst_setup import get_newest_asset
 from middleware.game_utils import generate_random_seed
@@ -52,4 +53,7 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = create_parser()
+    DataMiner = parser.parse_args()
+    print(DataMiner)
     main()
