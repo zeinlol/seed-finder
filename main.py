@@ -6,8 +6,9 @@ import database
 from itertools import count
 from io import BytesIO
 
-from arguments import create_parser
+from arguments import arguments, create_parser
 from config.minecraft_config import gen_opts, game
+from core.middleware import check_input
 from middleware.amidst_setup import get_newest_asset
 from middleware.game_utils import generate_random_seed
 from serialyzer import filter_mesa
@@ -54,6 +55,7 @@ def main():
 
 
 if __name__ == '__main__':
-    parser = create_parser()
-    print(parser)
-    main()
+    check_input()
+    # TODO if seeds as list (123, 123, 123) parser.seed = ['123,', '123,', '123']. Clean input if needed
+    # print(arguments.seed)
+    # main()
