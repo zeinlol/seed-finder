@@ -25,11 +25,12 @@ def main():
     game_versions = list(new_minecraft_instance.readInstalledVersionsAsLauncherProfiles())
     # TODO add cli output for installed versions
     print('installed versions:')
-    for version in game_versions:
-        print(version.getVersionId())
+    installed_versions = [version.getVersionId() for version in game_versions]
+    for version in installed_versions:
+        print(version)
 
     # TODO add cli version support
-    game_profile = next(filter(lambda version: version.getVersionId() == '1.16.1', game_versions))
+    game_profile = next(filter(lambda ver: ver.getVersionId() == '1.16.1', game_versions))
     game_interface = game.mojangapi.minecraftinterface.MinecraftInterfaces.fromLocalProfile(game_profile)
     game_world_builder = game.mojangapi.world.WorldBuilder.createSilentPlayerless()
 
@@ -78,8 +79,7 @@ def main():
 
             print(seed, seed.getLong())
 
+
 if __name__ == '__main__':
     check_input()
-    # TODO if seeds as list (123, 123, 123) parser.seed = ['123,', '123,', '123']. Clean input if needed
-    # print(arguments.seed)
     main()
