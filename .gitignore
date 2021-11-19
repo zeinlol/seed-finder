@@ -133,4 +133,4 @@ dmypy.json
 *.sqlite3
 
 # Amidist sources
-amidst
+amidst*
