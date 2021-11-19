@@ -40,24 +40,27 @@ async def main():
 
     world_type = game.mojangapi.world.WorldType.DEFAULT
 
-    if not seeds_to_analyse:
-        for iteration in count():
-            seed = generate_random_seed()
-            # print(f'Analyse random seed: {seed.getLong()}')
-            await analyze_seed(seed=seed,
-                               game_profile=game_profile,
-                               game_interface=game_interface,
-                               game_world_builder=game_world_builder)
-    else:
-        seeds = [game.mojangapi.world.WorldSeed.fromUserInput(seed) for seed in seeds_to_analyse]
-        # profiles = [game_profile for _ in seeds]
-        # interfaces = [game_interface for _ in seeds]
-        # builders = [game_world_builder for _ in seeds]
+    try:
+        if not seeds_to_analyse:
+                for _ in count():
+                    seed = generate_random_seed()
+                    # print(f'Analyse random seed: {seed.getLong()}')
+                    await analyze_seed(seed=seed,
+                                       game_profile=game_profile,
+                                       game_interface=game_interface,
+                                       game_world_builder=game_world_builder)
+        else:
+            seeds = [game.mojangapi.world.WorldSeed.fromUserInput(seed) for seed in seeds_to_analyse]
+            # profiles = [game_profile for _ in seeds]
+            # interfaces = [game_interface for _ in seeds]
+            # builders = [game_world_builder for _ in seeds]
 
-        await asyncio.gather(*(analyze_seed(seed=seed,
-                                            game_profile=game_profile,
-                                            game_interface=game_interface,
-                                            game_world_builder=game_world_builder) for seed in seeds))
+            await asyncio.gather(*(analyze_seed(seed=seed,
+                                                game_profile=game_profile,
+                                                game_interface=game_interface,
+                                                game_world_builder=game_world_builder) for seed in seeds))
+    except (KeyboardInterrupt, jpype._core.JVMNotRunning):
+        print('Scanning aborted.')
         # for iteration, seed in enumerate(seeds_to_analyse):
         #     print(f'analyze seed: {seed}')
         #     seed = game.mojangapi.world.WorldSeed.fromUserInput(seed)
