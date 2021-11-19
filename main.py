@@ -1,85 +1,77 @@
-# noinspection PyPackageRequirements
+import asyncio
+from datetime import datetime
+from itertools import count
+
 import jpype.imports
 
-import numpy as np
 import database
-from itertools import count
-from io import BytesIO
-
-from config.minecraft_config import gen_opts, game
+from config.main_classes import scan_config
+from config.minecraft_config import game
 from core.middleware import check_input
 from core.middleware.utils.amidst_setup import get_newest_asset
 from core.middleware.utils.game_utils import generate_random_seed
-from serialyzer import filter_mesa
-
-from config.variables import screen_width, screen_height
-from config.main_classes import scan_config
+from core.seed_analyzer.main_analyze import analyze_seed
+from core.utils.Installed_versions import get_minecraft_versions
 
 
-def main():
+async def main():
     seeds_to_analyse = scan_config.seeds_to_analyse
     database.initialize_db()
     jpype.startJVM(classpath=get_newest_asset())
     print('JVM started')
-    new_minecraft_instance = game.mojangapi.file.MinecraftInstallation.newLocalMinecraftInstallation()
-    game_versions = list(new_minecraft_instance.readInstalledVersionsAsLauncherProfiles())
+    game_versions = get_minecraft_versions()
     # TODO add cli output for installed versions
     print('installed versions:')
     installed_versions = [version.getVersionId() for version in game_versions]
     for version in installed_versions:
         print(version)
-
     # TODO add cli version support
-    game_profile = next(filter(lambda ver: ver.getVersionId() == '1.16.1', game_versions))
+    game_profile = ''
+    try:
+        game_profile = next(filter(lambda ver: ver.getVersionId() == '1.16.5', game_versions))
+    except StopIteration:
+        print('This version is not installed or unsupported!')
+        exit()
     game_interface = game.mojangapi.minecraftinterface.MinecraftInterfaces.fromLocalProfile(game_profile)
     game_world_builder = game.mojangapi.world.WorldBuilder.createSilentPlayerless()
 
+    start_time = datetime.now()
+    print(f'Start analyzing at {start_time}')
+
+    world_type = game.mojangapi.world.WorldType.DEFAULT
+
     if not seeds_to_analyse:
-        for i in count():
+        for iteration in count():
             seed = generate_random_seed()
-            print(f'Analyse random seed: {seed.getLong()}')
-            world_type = game.mojangapi.world.WorldType.DEFAULT
-            opts = game.mojangapi.world.WorldOptions(seed, world_type, gen_opts)
-            world = game_world_builder.from_(game_interface, opts)
-            biome_oracle = world.getBiomeDataOracle()
-
-            def biome_val(x, y):
-                return np.uint8(int(biome_oracle.getBiomeAt(x, y, True).getId()))
-
-            biome_data = np.fromfunction(np.vectorize(biome_val), (screen_width, screen_height), dtype=np.int64)
-
-            if not filter_mesa(biome_data):
-                bin_data = None
-                with BytesIO() as tmp_file:
-                    np.save(tmp_file, biome_data)
-                    bin_data = tmp_file.getvalue()
-                world = database.World.create(seed=seed.getLong(), biome_data=bin_data)
-
-            print(i, seed.getLong())
+            # print(f'Analyse random seed: {seed.getLong()}')
+            await analyze_seed(seed=seed,
+                               game_profile=game_profile,
+                               game_interface=game_interface,
+                               game_world_builder=game_world_builder)
     else:
-        for seed in scan_config.seeds_to_analyse:
-            print(f'analyze seed: {seed}')
-            seed = game.mojangapi.world.WorldSeed.fromUserInput(seed)
-            world_type = game.mojangapi.world.WorldType.DEFAULT
-            opts = game.mojangapi.world.WorldOptions(seed, world_type, gen_opts)
-            world = game_world_builder.from_(game_interface, opts)
-            biome_oracle = world.getBiomeDataOracle()
+        seeds = [game.mojangapi.world.WorldSeed.fromUserInput(seed) for seed in seeds_to_analyse]
+        # profiles = [game_profile for _ in seeds]
+        # interfaces = [game_interface for _ in seeds]
+        # builders = [game_world_builder for _ in seeds]
 
-            def biome_val(x, y):
-                return np.uint8(int(biome_oracle.getBiomeAt(x, y, True).getId()))
+        await asyncio.gather(*(analyze_seed(seed=seed,
+                                            game_profile=game_profile,
+                                            game_interface=game_interface,
+                                            game_world_builder=game_world_builder) for seed in seeds))
+        # for iteration, seed in enumerate(seeds_to_analyse):
+        #     print(f'analyze seed: {seed}')
+        #     seed = game.mojangapi.world.WorldSeed.fromUserInput(seed)
+        #     analyze_seed(seed=seed, game=game, game_profile=game_profile, game_interface=game_interface,
+        #                  game_world_builder=game_world_builder, counter=iteration)
 
-            biome_data = np.fromfunction(np.vectorize(biome_val), (screen_width, screen_height), dtype=np.int64)
-
-            if not filter_mesa(biome_data):
-                bin_data = None
-                with BytesIO() as tmp_file:
-                    np.save(tmp_file, biome_data)
-                    bin_data = tmp_file.getvalue()
-                world = database.World.create(seed=seed.getLong(), biome_data=bin_data)
-
-            print(seed, seed.getLong())
+    end_time = datetime.now()
+    print(f'Finish analyzing at {end_time}')
+    total_time = str(end_time - start_time)
+    print(f"Total scan time is: {total_time} seconds.")
 
 
 if __name__ == '__main__':
     check_input()
-    main()
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(main())
+    # main()
