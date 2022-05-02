@@ -25,7 +25,11 @@ def main():
     if cli_arguments.show_versions:
         asset_api.print_versions()
         exit(0)
+    if cli_arguments.show_biomes:
+        asset_api.print_biomes()
+        exit(0)
     print(f'Minecraft {cli_arguments.game_version} started successfully')
+    print(f"Search for biomes: {', '.join(asset_api.target_biomes_names)}")
     start_time = datetime.now()
     print(f'Start analyzing at {start_time}')
     asset_api.search_seeds()
