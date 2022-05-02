@@ -1,4 +1,4 @@
-from config.minecraft_config import game
+from core.config.minecraft_config import game
 
 
 def generate_random_seed():

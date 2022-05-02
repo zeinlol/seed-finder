@@ -1,6 +1,6 @@
 from peewee import Model, BigIntegerField, DoubleField, BlobField, BooleanField, SqliteDatabase
 
-from config.variables import database_file
+from core.config.variables import database_file
 
 db = SqliteDatabase(database_file)
 
@@ -20,7 +20,7 @@ def initialize_db():
     db.connect()
     db.create_tables([World], safe=True)
     db.close()
+    print('database initialization Done')
 
 
 initialize_db()
-print('database initialization Done')

@@ -131,3 +131,6 @@ dmypy.json
 .idea
 *.sqlite
 *.sqlite3
+
+assets/**/*
+!assets/*.jar
