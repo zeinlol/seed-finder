@@ -1,3 +1,4 @@
+# noinspection PyPackageRequirements
 import jpype.imports
 
 from core import cli_arguments
