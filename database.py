@@ -21,6 +21,3 @@ def initialize_db():
     db.create_tables([World], safe=True)
     db.close()
     print('database initialization Done')
-
-
-initialize_db()

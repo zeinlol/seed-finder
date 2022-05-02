@@ -1,4 +1,5 @@
 from core.config.minecraft_config import game, gen_opts
+from core.game_classes.seeds import Seed
 
 
 class GameInstance:
@@ -36,6 +37,12 @@ class GameInstance:
 
     def generate_random_seed(self):
         return self._game_package.mojangapi.world.WorldSeed.random()
+
+    def convert_seeds(self, seeds: list) -> list[Seed]:
+        return [self.convert_seed(seed) for seed in seeds]
+
+    def convert_seed(self, seed) -> Seed:
+        return Seed(game_value=self._game_package.mojangapi.world.WorldSeed.fromUserInput(seed), user_seed=seed)
 
     def get_world_options(self, seed, world_type=None, gen_options=None):
         if gen_options is None:

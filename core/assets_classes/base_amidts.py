@@ -2,6 +2,7 @@ from io import BytesIO
 from itertools import count
 
 import numpy as np
+import peewee
 
 import database
 from core import cli_arguments
@@ -10,6 +11,7 @@ from core.config.typing import T_BIOME_IDS
 from core.config.variables import screen_width, screen_height
 from core.game_classes.biome_class import GameBiome
 from core.game_classes.game_data import GameInstance
+from core.game_classes.seeds import Seed
 from core.middleware.amidst_setup import get_assets_list
 from core.middleware.filters.biom_lifters import filter_mesa
 
@@ -22,17 +24,20 @@ class BaseAsset(AbstractAssetClass):
     _game_profile = None
     _game_interface = None
     _biomes_list: list[GameBiome] = []
-    _seed = None
+    _current_seed = None
+    _seeds: list[Seed] = None
     _world = []
 
-    def __init__(self, amidst_sources, game_version: str):
+    def __init__(self, amidst_sources, game_version: str = None):
         try:
             self.amidst_sources = amidst_sources
             self._game_instance = GameInstance()
-            self.game_version = game_version
+            self.game_version = game_version or cli_arguments.game_version
             self.game_versions = self._game_instance.game_versions
             self.check_versions()
             self._game_interface = self._game_instance.create_game(self.get_game_profile())
+            if cli_arguments.seeds:
+                self._seeds = self._game_instance.convert_seeds(cli_arguments.seeds)
         except (AttributeError, TypeError):
             print('Unsupported amidst version or error in sources')
             exit(1)
@@ -42,8 +47,12 @@ class BaseAsset(AbstractAssetClass):
         return self._biomes_list
 
     @property
+    def seed_number(self):
+        return self._current_seed.getLong()
+
+    @property
     def seed(self):
-        return self._seed
+        return self._current_seed
 
     def check_versions(self):
         try:
@@ -71,9 +80,9 @@ class BaseAsset(AbstractAssetClass):
         for biome in biomes:
             self._biomes_list.append(GameBiome(biome_name=biome.getName(), biome_id=int(biome.getId())))
 
-    def generate_new_world(self):
-        self._seed = self._game_instance.generate_random_seed()
-        options = self._game_instance.get_world_options(seed=self._seed)
+    def generate_new_world(self, seed=None):
+        self._current_seed = seed or self._game_instance.generate_random_seed()
+        options = self._game_instance.get_world_options(seed=self._current_seed)
         self._world = self._game_instance.create_silent_player_class().from_(self._game_interface, options)
 
         self.fill_biomes(self._world.getBiomeList().iterable())
@@ -87,28 +96,51 @@ class BaseAsset(AbstractAssetClass):
 
     def search_seeds(self):
         print('Found seeds:')
+        if self._seeds:
+            self.check_user_seeds()
+            return
         for i in count():
             if i == cli_arguments.amount:
                 break
-            self.generate_new_world()
             try:
-                biomes_info = self.get_biomes_data()  # v4-5-beta3
-            except AttributeError as error:
-                print(f'Incompatible game and asset version.'
-                      f'\nGame version: {self.game_version}'
-                      f'\nAsset version: {self.amidst_sources}')
-                print(error)
-                exit(1)
+                result = 'Contains looked data!' if self.check_world() else '-'
+                print(f'{i} {result} Seed: {self.seed_number}')
+            except Exception as error:
+                print(f'Error on analyzing seed {self.seed_number}:\n{error}')
 
-            def biome_val(x, y):
-                return np.uint8(int(biomes_info.getBiomeAt(x, y, True).getId()))
+    def check_user_seeds(self):
+        for key, seed in enumerate(self._seeds):
+            try:
+                result = 'Contains looked data!' if self.check_world(seed=seed.game_value) else '-'
+                print(f'{key} {result} Seed: {seed.input_value} (was converted to {seed.game_value.getLong()})')
+            except Exception as error:
+                print(f'Error on analyzing seed  {seed.input_value} '
+                      f'(was converted to {seed.game_value.getLong()}):\n{error}')
+        print('Analyze finished successfully')
 
-            biome_data = np.fromfunction(np.vectorize(biome_val), (screen_width, screen_height), dtype=np.int64)
+    def check_world(self, seed=None):
+        self.generate_new_world(seed=seed)
+        try:
+            biomes_info = self.get_biomes_data()  # v4-5-beta3
+        except AttributeError as error:
+            print(f'Incompatible game and asset version.'
+                  f'\nGame version: {self.game_version}'
+                  f'\nAsset version: {self.amidst_sources}')
+            print(error)
+            exit(1)
 
-            if not filter_mesa(biome_data):
-                with BytesIO() as tmp_file:
-                    np.save(tmp_file, biome_data)
-                    bin_data = tmp_file.getvalue()
-                database.World.create(seed=self._seed.getLong(), biome_data=bin_data)
+        def biome_val(x, y):
+            return np.uint8(int(biomes_info.getBiomeAt(x, y, True).getId()))
 
-            print(i, self._seed.getLong())
+        biome_data = np.fromfunction(np.vectorize(biome_val), (screen_width, screen_height), dtype=np.int64)
+
+        if not filter_mesa(biome_data):
+            with BytesIO() as tmp_file:
+                np.save(tmp_file, biome_data)
+                bin_data = tmp_file.getvalue()
+            try:
+                database.World.create(seed=seed.getLong(), biome_data=bin_data)
+            except peewee.IntegrityError:
+                print(f'ERROR: {seed.getLong()} already created')
+            return False
+        return True
