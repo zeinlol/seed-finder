@@ -1,5 +1,6 @@
 from io import BytesIO
 from itertools import count
+from typing import Union
 
 import numpy as np
 import peewee
@@ -53,6 +54,10 @@ class BaseAsset(AbstractAssetClass):
         return [biome.biome_name for biome in self._target_biomes]
 
     @property
+    def target_biomes_ids(self) -> list[int]:
+        return [biome.biome_id for biome in self._target_biomes]
+
+    @property
     def seed_number(self):
         return self._current_seed.getLong()
 
@@ -80,6 +85,13 @@ class BaseAsset(AbstractAssetClass):
         print(f'Biomes in minecraft {self.game_version}:')
         for biome in self.biomes_list:
             print(f'\t{biome.biome_id}: {biome.biome_name}')
+
+    def save_result(self, iteration: Union[str, int], result: str, seed, custom_seed: Union[str, int] = None):
+        text = f'{str(iteration).ljust(5)} {result.ljust(20)} Seed: {seed}'
+        if custom_seed:
+            text += f' (was converted from {custom_seed})'
+        if not (result == '-' and cli_arguments.silent):
+            print(text)
 
     def get_game_profile(self):
         return self._game_profile
@@ -127,18 +139,28 @@ class BaseAsset(AbstractAssetClass):
             if i == cli_arguments.amount:
                 break
             try:
-                result = 'Contains looked data!' if self.check_world() else '-'
-                if result != '-' and cli_arguments.silent:
-                    print(f'{i} {result} Seed: {self.seed_number}')
+                result = 'Found looked data!' if self.check_world() else '-'
+                self.save_result(iteration=i, result=result, seed=self.seed_number)
+            except MemoryError as error:
+                print(f'{i} NumPy error on analyzing seed: {self.seed_number} not enough memory. '
+                      f'Too large world size.\n{error}')
+                exit(1)
             except Exception as error:
-                print(f'Error on analyzing seed {self.seed_number}:\n{error}')
+                print(f'{i} Error on analyzing seed {self.seed_number}:\n{error}')
 
     def check_user_seeds(self):
         for key, seed in enumerate(self._seeds):
             try:
-                result = 'Contains looked data!' if self.check_world(seed=seed.game_value) else '-'
-                if result != '-' and cli_arguments.silent:
-                    print(f'{key} {result} Seed: {seed.input_value} (was converted to {seed.game_value.getLong()})')
+                result = 'Found looked data!' if self.check_world(seed=seed.game_value) else '-'
+                self.save_result(iteration=key,
+                                 result=result,
+                                 seed=seed.game_value.getLong(),
+                                 custom_seed=seed.input_value)
+            except MemoryError as error:
+                print(f'{key} NumPy error on analyzing seed:  {self.seed.input_value} '
+                      f'(was converted to {seed.game_value.getLong()})not enough memory. '
+                      f'Too large world size.\n{error}')
+                exit(1)
             except Exception as error:
                 print(f'{key} Error on analyzing seed  {seed.input_value} '
                       f'(was converted to {seed.game_value.getLong()}):\n{error}')
@@ -160,8 +182,9 @@ class BaseAsset(AbstractAssetClass):
         def biome_val(x, y):
             return np.uint8(int(biomes_info.getBiomeAt(x, y, True).getId()))
 
-        biome_data = np.fromfunction(np.vectorize(biome_val), (cli_arguments.size_x, cli_arguments.size_y), dtype=np.int64)
-
+        biome_data = np.fromfunction(np.vectorize(biome_val),
+                                     (cli_arguments.size_x, cli_arguments.size_y),
+                                     dtype=np.int64)
         if not filter_biome(biomes_array=biome_data, target_biome=self._target_biomes):
             with BytesIO() as tmp_file:
                 np.save(tmp_file, biome_data)
@@ -169,6 +192,6 @@ class BaseAsset(AbstractAssetClass):
             try:
                 database.World.create(seed=seed.getLong(), biome_data=bin_data)
             except peewee.IntegrityError:
-                print(f'ERROR: {seed.getLong()} already created')
+                print(f'Numpy warn: {seed.getLong()} already created')
             return True
         return False
