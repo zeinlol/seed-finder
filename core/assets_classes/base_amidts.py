@@ -8,7 +8,6 @@ import database
 from core import cli_arguments
 from core.assets_classes.abstract_asset import AbstractAssetClass
 from core.config.typing import T_BIOME_IDS, T_TARGET_BIOMES_NAMES, T_TARGET_BIOME_NAME
-from core.config.variables import screen_width, screen_height
 from core.game_classes.biome_class import GameBiome
 from core.game_classes.game_data import GameInstance
 from core.game_classes.seeds import Seed
@@ -129,7 +128,8 @@ class BaseAsset(AbstractAssetClass):
                 break
             try:
                 result = 'Contains looked data!' if self.check_world() else '-'
-                print(f'{i} {result} Seed: {self.seed_number}')
+                if result != '-' and cli_arguments.silent:
+                    print(f'{i} {result} Seed: {self.seed_number}')
             except Exception as error:
                 print(f'Error on analyzing seed {self.seed_number}:\n{error}')
 
@@ -137,9 +137,10 @@ class BaseAsset(AbstractAssetClass):
         for key, seed in enumerate(self._seeds):
             try:
                 result = 'Contains looked data!' if self.check_world(seed=seed.game_value) else '-'
-                print(f'{key} {result} Seed: {seed.input_value} (was converted to {seed.game_value.getLong()})')
+                if result != '-' and cli_arguments.silent:
+                    print(f'{key} {result} Seed: {seed.input_value} (was converted to {seed.game_value.getLong()})')
             except Exception as error:
-                print(f'Error on analyzing seed  {seed.input_value} '
+                print(f'{key} Error on analyzing seed  {seed.input_value} '
                       f'(was converted to {seed.game_value.getLong()}):\n{error}')
         print('Analyze finished successfully')
 
@@ -159,7 +160,7 @@ class BaseAsset(AbstractAssetClass):
         def biome_val(x, y):
             return np.uint8(int(biomes_info.getBiomeAt(x, y, True).getId()))
 
-        biome_data = np.fromfunction(np.vectorize(biome_val), (screen_width, screen_height), dtype=np.int64)
+        biome_data = np.fromfunction(np.vectorize(biome_val), (cli_arguments.size_x, cli_arguments.size_y), dtype=np.int64)
 
         if not filter_biome(biomes_array=biome_data, target_biome=self._target_biomes):
             with BytesIO() as tmp_file:

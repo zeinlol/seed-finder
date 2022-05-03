@@ -1,6 +1,6 @@
 import argparse
 
-from core.config.variables import minecraft_version, amidst_file
+from core.config.variables import minecraft_version, amidst_file, screen_width, screen_height
 
 
 def create_parser():
@@ -17,6 +17,10 @@ def create_parser():
                              " Can search by part of name.\n"
                              "If 'Badlands' than search for 'Eroded Badlands', 'Modified Badlands Plateau'...\n"
                              'Default is Badlands. Run --show-biomes to see all possible values.')
+    parser.add_argument('-x', '--size-x', type=int, default=screen_width,
+                        help=f"Search width (X coordinate). Default: {screen_width}")
+    parser.add_argument('-y', '--size-y', type=int, default=screen_height,
+                        help=f"Search height (Y coordinate). Default: {screen_height}")
     # parser.add_argument('-w', '--world-type', type=str, default='Default',
     #                     help='World type')
     parser.add_argument('-a', '--amount', type=int, default=-1,
@@ -25,6 +29,8 @@ def create_parser():
     #                        help='show data as json')
     #    parser.add_argument('-o', '--output', type=Path, default=None,
     #                        help='File to save data')
+    parser.add_argument('-sl', '--silent', default=False, action='store_true',
+                        help='Hide seeds without data')
     parser.add_argument('-sv', '--show-versions', default=False, action='store_true',
                         help='See installed minecraft and sources versions and exit')
     parser.add_argument('-sb', '--show-biomes', default=False, action='store_true',
